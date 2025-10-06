@@ -4,6 +4,57 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const https = require('https');
+
+// Geocoding helper function
+async function geocodeAddress(city, state, address) {
+  return new Promise((resolve, reject) => {
+    const query = encodeURIComponent(`${address}, ${city}, ${state}, India`);
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=1`;
+    
+    https.get(url, { headers: { 'User-Agent': 'BloodPlus' } }, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          const results = JSON.parse(data);
+          if (results && results.length > 0) {
+            resolve({
+              type: 'Point',
+              coordinates: [parseFloat(results[0].lon), parseFloat(results[0].lat)]
+            });
+          } else {
+            // Fallback: try just city
+            const cityQuery = encodeURIComponent(`${city}, ${state}, India`);
+            const cityUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${cityQuery}&limit=1`;
+            
+            https.get(cityUrl, { headers: { 'User-Agent': 'BloodPlus' } }, (res2) => {
+              let data2 = '';
+              res2.on('data', chunk => data2 += chunk);
+              res2.on('end', () => {
+                try {
+                  const cityResults = JSON.parse(data2);
+                  if (cityResults && cityResults.length > 0) {
+                    resolve({
+                      type: 'Point',
+                      coordinates: [parseFloat(cityResults[0].lon), parseFloat(cityResults[0].lat)]
+                    });
+                  } else {
+                    resolve({ type: 'Point', coordinates: [78.9629, 20.5937] }); // Default India center
+                  }
+                } catch (err) {
+                  resolve({ type: 'Point', coordinates: [78.9629, 20.5937] });
+                }
+              });
+            }).on('error', () => resolve({ type: 'Point', coordinates: [78.9629, 20.5937] }));
+          }
+        } catch (err) {
+          resolve({ type: 'Point', coordinates: [78.9629, 20.5937] });
+        }
+      });
+    }).on('error', () => resolve({ type: 'Point', coordinates: [78.9629, 20.5937] }));
+  });
+}
 
 // Register new user
 router.post('/register', async (req, res) => {
@@ -19,6 +70,9 @@ router.post('/register', async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Geocode address to get coordinates
+    const location = await geocodeAddress(city, state, address);
+
     // Create new user
     const user = new User({
       name,
@@ -28,7 +82,8 @@ router.post('/register', async (req, res) => {
       bloodGroup,
       city,
       state,
-      address
+      address,
+      location
     });
 
     await user.save();

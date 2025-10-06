@@ -4,26 +4,58 @@ const router = express.Router();
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 
-// Search donors by blood group and location
+// Search donors by blood group and location (with geospatial search)
 router.get('/search', async (req, res) => {
   try {
-    const { bloodGroup, city } = req.query;
+    const { bloodGroup, city, latitude, longitude, radius } = req.query;
 
-    const query = { availableToDonate: true };
-    
-    if (bloodGroup) {
-      query.bloodGroup = bloodGroup;
-    }
-    
-    if (city) {
-      query.city = new RegExp(city, 'i');
+    let donors;
+
+    // If coordinates are provided, use geospatial search
+    if (latitude && longitude) {
+      const lat = parseFloat(latitude);
+      const lng = parseFloat(longitude);
+      const searchRadius = parseInt(radius) || 50000; // Default 50km in meters
+
+      const query = {
+        location: {
+          $near: {
+            $geometry: {
+              type: 'Point',
+              coordinates: [lng, lat] // GeoJSON uses [longitude, latitude]
+            },
+            $maxDistance: searchRadius
+          }
+        }
+      };
+
+      // Add blood group filter if provided
+      if (bloodGroup) {
+        query.bloodGroup = bloodGroup;
+      }
+
+      donors = await User.find(query).select('-password');
+    } else {
+      // Fallback to city-based search
+      const query = {};
+      
+      if (bloodGroup) {
+        query.bloodGroup = bloodGroup;
+      }
+      
+      if (city) {
+        query.city = new RegExp(city.trim(), 'i');
+      }
+
+      donors = await User.find(query).select('-password');
     }
 
-    const donors = await User.find(query).select('-password');
+    // Filter only available donors
+    const availableDonors = donors.filter(donor => donor.availableToDonate);
 
     res.json({
-      count: donors.length,
-      donors
+      count: availableDonors.length,
+      donors: availableDonors
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
