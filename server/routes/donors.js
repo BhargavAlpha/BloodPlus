@@ -7,9 +7,9 @@ const auth = require('../middleware/auth');
 // Search donors by blood group and location
 router.get('/search', async (req, res) => {
   try {
-    const { bloodGroup, city, latitude, longitude } = req.query;
+    const { bloodGroup, city, latitude, longitude, excludeUserId } = req.query;
 
-    console.log('Search params:', { bloodGroup, city, latitude, longitude });
+    console.log('Search params:', { bloodGroup, city, latitude, longitude, excludeUserId });
 
     let donors = [];
     
@@ -24,6 +24,11 @@ router.get('/search', async (req, res) => {
     // Add city filter if provided
     if (city && city.trim() !== '') {
       query.city = new RegExp(city.trim(), 'i');
+    }
+
+    // Exclude current user from results
+    if (excludeUserId && excludeUserId.trim() !== '') {
+      query._id = { $ne: excludeUserId };
     }
 
     console.log('Query object:', query);

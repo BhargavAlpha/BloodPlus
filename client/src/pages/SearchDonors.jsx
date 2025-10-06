@@ -86,7 +86,7 @@ function MapRecenter({ center }) {
   return null;
 }
 
-function SearchDonors() {
+function SearchDonors({ user }) {
   const [bloodGroup, setBloodGroup] = useState('');
   const [city, setCity] = useState('');
   const [donors, setDonors] = useState([]);
@@ -154,6 +154,11 @@ function SearchDonors() {
       // Use geolocation if available
       if (userLocation) {
         searchUrl += `latitude=${userLocation.lat}&longitude=${userLocation.lng}&`;
+      }
+
+      // Exclude current logged-in user from search results
+      if (user && user.id) {
+        searchUrl += `excludeUserId=${user.id}&`;
       }
 
       console.log('Search URL:', searchUrl);

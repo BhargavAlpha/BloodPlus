@@ -78,7 +78,7 @@ function App() {
           <Route 
             path="/search-donors" 
             element={
-              isLoggedIn ? <SearchDonors /> : <Navigate to="/login" />
+              isLoggedIn ? <SearchDonors user={user} /> : <Navigate to="/login" />
             } 
           />
           
