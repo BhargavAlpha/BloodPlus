@@ -8,11 +8,11 @@ function Home() {
       <div className="hero">
         <h1>🩸 Save Lives, Donate Blood</h1>
         <p>Connect blood donors with those in need</p>
-        <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
-          <Link to="/register">
+        <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', position: 'relative', zIndex: 1 }}>
+          <Link to="/register" style={{ textDecoration: 'none' }}>
             <button className="btn btn-primary">Register as Donor</button>
           </Link>
-          <Link to="/search-donors">
+          <Link to="/search-donors" style={{ textDecoration: 'none' }}>
             <button className="btn btn-secondary">Find Blood</button>
           </Link>
         </div>

@@ -142,33 +142,38 @@ function SearchDonors() {
       let searchUrl = '/api/donors/search?';
       
       // Add blood group if selected
-      if (bloodGroup) {
-        searchUrl += `bloodGroup=${bloodGroup}&`;
+      if (bloodGroup && bloodGroup.trim() !== '') {
+        searchUrl += `bloodGroup=${encodeURIComponent(bloodGroup)}&`;
       }
       
-      // Use geolocation if available for better results
+      // Add city if provided
+      if (city && city.trim() !== '') {
+        searchUrl += `city=${encodeURIComponent(city.trim())}&`;
+      }
+      
+      // Use geolocation if available
       if (userLocation) {
-        searchUrl += `latitude=${userLocation.lat}&longitude=${userLocation.lng}&radius=50000&`;
+        searchUrl += `latitude=${userLocation.lat}&longitude=${userLocation.lng}&`;
       }
-      
-      // Add city for filtering
-      if (city) {
-        searchUrl += `city=${city.trim()}`;
-      }
+
+      console.log('Search URL:', searchUrl);
 
       const response = await apiCall(searchUrl);
-
       const data = await response.json();
+      
+      console.log('Search response:', data);
+      
       if (response.ok) {
-        console.log('Search results:', data);
         setDonors(data.donors || []);
         
         // Geocode the searched city and center map
-        if (city) {
+        if (city && city.trim() !== '') {
           const cityCoords = await geocodeCity(city);
           if (cityCoords) {
             setMapCenter([cityCoords.lat, cityCoords.lng]);
           }
+        } else if (userLocation) {
+          setMapCenter([userLocation.lat, userLocation.lng]);
         }
       } else {
         console.error('Search failed:', data);
@@ -354,7 +359,10 @@ function SearchDonors() {
                       <div className="donor-card-header">
                         <div>
                           <h3>{donor.name}</h3>
-                          <p className="donor-subtitle">{donor.city}, {donor.state}</p>
+                          <p className="donor-subtitle">
+                            {donor.city}, {donor.state}
+                            {donor.distance && ` • ${donor.distance} km away`}
+                          </p>
                         </div>
                         <span className="blood-group">{donor.bloodGroup}</span>
                       </div>
